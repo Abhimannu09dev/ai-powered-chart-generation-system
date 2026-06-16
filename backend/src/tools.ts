@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { type FunctionDeclaration } from "@google/generative-ai";
 import { Random } from "random";
 import {
   chartConfigSchema,
@@ -116,43 +115,4 @@ export function validateChartConfig(
   };
 }
 
-function toGeminiSchema(
-  zodSchema: z.ZodType,
-): Record<string, unknown> {
-  const jsonSchema = z.toJSONSchema(zodSchema, {
-    target: "openapi-3.0",
-    reused: "inline",
-  });
-  const { $schema, $defs, additionalProperties, ...clean } =
-    jsonSchema as Record<string, unknown>;
-  return clean;
-}
 
-function makeDeclaration(
-  name: string,
-  description: string,
-  schema: z.ZodType,
-): FunctionDeclaration {
-  return {
-    name,
-    description,
-    parameters: toGeminiSchema(schema) as unknown as FunctionDeclaration["parameters"],
-  };
-}
-
-export const fetchChartDataDeclaration = makeDeclaration(
-  "fetch_chart_data",
-  "Generate synthetic data for a chart based on the user's request. " +
-    "Call this when you need numerical data to populate a chart. " +
-    "Provide the query describing what data you need, and optionally specify years, categories, and series names. " +
-    "Returns labeled data arrays suitable for Chart.js.",
-  fetchChartDataParamsSchema,
-);
-
-export const validateChartDataDeclaration = makeDeclaration(
-  "validate_chart_data",
-  "Validate a Chart.js configuration object. " +
-    "Checks that labels exist, datasets are non-empty, each dataset has a matching data array, and all values are numbers. " +
-    "Returns { valid: boolean, errors: string[] }. If valid is false, fix the errors and call again.",
-  chartConfigSchema,
-);
