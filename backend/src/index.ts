@@ -1,7 +1,7 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { generateChartRequestSchema, ChartConfig } from "./validation";
+import { generateChartRequestSchema, ChartConfig, ToolCallRecord } from "./validation";
 
 dotenv.config();
 
@@ -14,7 +14,7 @@ app.use(express.json({ limit: "1mb" }));
 async function start() {
   const provider = process.env.AI_PROVIDER || "gemini";
 
-  let generateChartConfig: (prompt: string) => Promise<ChartConfig>;
+  let generateChartConfig: (prompt: string) => Promise<{ config: ChartConfig; toolCalls: ToolCallRecord[] }>;
 
   if (provider === "deepseek") {
     const deepseek = await import("./deepseek");
@@ -34,9 +34,10 @@ async function start() {
     }
     const { prompt } = parsed.data;
     try {
-      const config = await generateChartConfig(prompt);
+      const { config, toolCalls } = await generateChartConfig(prompt);
       console.log("Generated chart config:", config);
-      res.json({ config });
+      console.log("Tool calls:", toolCalls);
+      res.json({ config, toolCalls });
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "An unknown error occurred";

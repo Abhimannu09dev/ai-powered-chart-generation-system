@@ -78,3 +78,9 @@ export type ChartConfig = z.infer<typeof chartConfigSchema>;
 export type ChartData = z.infer<typeof chartDataSchema>;
 export type GenerateChartRequest = z.infer<typeof generateChartRequestSchema>;
 export type FetchChartDataParams = z.infer<typeof fetchChartDataParamsSchema>;
+
+export interface ToolCallRecord {
+  name: string;
+  args: Record<string, unknown>;
+  result: unknown;
+}

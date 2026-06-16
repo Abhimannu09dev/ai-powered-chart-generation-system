@@ -9,6 +9,7 @@ import {
   FetchChartDataParams,
   fetchChartDataParamsSchema,
   chartConfigSchema,
+  ToolCallRecord,
 } from "./validation";
 
 import dotenv from "dotenv";
@@ -69,11 +70,13 @@ const SYSTEM_INSTRUCTION =
 
 export async function generateChartConfig(
   prompt: string,
-): Promise<ChartConfig> {
+): Promise<{ config: ChartConfig; toolCalls: ToolCallRecord[] }> {
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     { role: "system", content: SYSTEM_INSTRUCTION },
     { role: "user", content: prompt },
   ];
+
+  const toolCalls: ToolCallRecord[] = [];
 
   for (let round = 0; round < MAX_ROUNDS; round++) {
     const response = await client.chat.completions.create({
@@ -91,7 +94,8 @@ export async function generateChartConfig(
         .replace(/^```(?:json)?\s*/m, "")
         .replace(/\s*```$/m, "");
       try {
-        return JSON.parse(cleaned) as ChartConfig;
+        const config = JSON.parse(cleaned) as ChartConfig;
+        return { config, toolCalls };
       } catch {
         throw new Error(
           `Failed to parse chart config from response: ${cleaned}`,
@@ -105,6 +109,7 @@ export async function generateChartConfig(
       if (fn.name === "fetch_chart_data") {
         const args = JSON.parse(fn.arguments) as FetchChartDataParams;
         const output = fetchChartData(args);
+        toolCalls.push({ name: "fetch_chart_data", args: args as unknown as Record<string, unknown>, result: output });
         messages.push({
           role: "tool",
           tool_call_id: toolCall.id,
@@ -113,6 +118,7 @@ export async function generateChartConfig(
       } else if (fn.name === "validate_chart_data") {
         const args = JSON.parse(fn.arguments) as Record<string, unknown>;
         const output = validateChartConfig(args);
+        toolCalls.push({ name: "validate_chart_data", args, result: output });
         messages.push({
           role: "tool",
           tool_call_id: toolCall.id,

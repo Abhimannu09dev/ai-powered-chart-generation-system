@@ -9,6 +9,7 @@ import {
   FetchChartDataParams,
   fetchChartDataParamsSchema,
   chartConfigSchema,
+  ToolCallRecord,
 } from "./validation";
 
 import dotenv from "dotenv";
@@ -100,11 +101,13 @@ console.log("Initialized Gemini model:", model);
 
 export async function generateChartConfig(
   prompt: string,
-): Promise<ChartConfig> {
+): Promise<{ config: ChartConfig; toolCalls: ToolCallRecord[] }> {
   try {
     const chat = model.startChat({ history: [] });
     console.log("Starting chat with prompt:", prompt);
     let result = await chat.sendMessage(prompt);
+
+    const toolCalls: ToolCallRecord[] = [];
 
     // for (let round = 0; round < MAX_ROUNDS; round++) {
       const functionCalls = result.response.functionCalls();
@@ -115,7 +118,8 @@ export async function generateChartConfig(
           .replace(/^```(?:json)?\s*/m, "")
           .replace(/\s*```$/m, "");
         try {
-          return JSON.parse(cleaned) as ChartConfig;
+          const config = JSON.parse(cleaned) as ChartConfig;
+          return { config, toolCalls };
         } catch {
           throw new Error(
             `Failed to parse chart config from Gemini response: ${cleaned}`,
@@ -126,15 +130,16 @@ export async function generateChartConfig(
       const responseParts: Part[] = [];
       for (const fc of functionCalls) {
         if (fc.name === "fetch_chart_data") {
-          const output = fetchChartData(
-            fc.args as unknown as FetchChartDataParams,
-          );
+          const args = fc.args as unknown as FetchChartDataParams;
+          const output = fetchChartData(args);
+          toolCalls.push({ name: "fetch_chart_data", args: args as unknown as Record<string, unknown>, result: output });
           responseParts.push({
             functionResponse: { name: fc.name, response: output },
           });
         } else if (fc.name === "validate_chart_data") {
           const args = fc.args as Record<string, unknown>;
           const output = validateChartConfig(args);
+          toolCalls.push({ name: "validate_chart_data", args, result: output });
           responseParts.push({
             functionResponse: { name: fc.name, response: output },
           });

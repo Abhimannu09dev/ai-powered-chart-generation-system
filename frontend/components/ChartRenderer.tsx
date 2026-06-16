@@ -59,7 +59,7 @@ export default function ChartRenderer({ config }: ChartRendererProps) {
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
+    <div className="w-full">
       <Chart type={config.type} data={config.data} options={config.options} />
     </div>
   );
