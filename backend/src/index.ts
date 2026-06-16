@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { generateChartConfig } from "./gemini";
+import { generateChartRequestSchema } from "./validation";
 
 dotenv.config();
 
@@ -17,28 +18,15 @@ app.use(cors({ origin: process.env.CORS_ORIGIN || "http://localhost:3000" }));
 app.use(express.json({ limit: "1mb" }));
 
 app.post("/api/generate-chart", async (req: Request, res: Response) => {
-  const { prompt } = req.body;
-
-  if (!prompt || typeof prompt !== "string") {
-    res
-      .status(400)
-      .json({ error: "Missing or invalid 'prompt' in request body" });
+  const parsed = generateChartRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0].message });
     return;
   }
-
+  const { prompt } = parsed.data;
+  console.log("Received prompt:", prompt);
   try {
-    const TIMEOUT_MS = 25000;
-    const config = await Promise.race([
-      generateChartConfig(prompt),
-      new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          reject(
-            new Error("Request timed out — Gemini API did not respond in time"),
-          );
-        }, TIMEOUT_MS);
-      }),
-    ]);
-
+    const config = await generateChartConfig(prompt);
     res.json({ config });
   } catch (err: unknown) {
     const message =

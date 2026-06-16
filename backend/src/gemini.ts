@@ -1,14 +1,17 @@
 import { GoogleGenerativeAI, Part } from "@google/generative-ai";
 import {
-  ChartConfig,
-  FetchChartDataParams,
   fetchChartData,
   validateChartConfig,
   fetchChartDataDeclaration,
   validateChartDataDeclaration,
 } from "./tools";
+import { ChartConfig, FetchChartDataParams } from "./validation";
+
+import dotenv from "dotenv";
+dotenv.config();
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+console.log(genAI);
 
 const SYSTEM_INSTRUCTION =
   "You are a chart generation assistant. Your job is to produce valid Chart.js configuration objects. " +
@@ -23,7 +26,7 @@ const SYSTEM_INSTRUCTION =
   "with keys: type, data, options. Do not wrap in markdown or add extra text.";
 
 const model = genAI.getGenerativeModel({
-  model: "gemini-2.5-flash",
+  model: "gemini-3-flash-preview",
   systemInstruction: SYSTEM_INSTRUCTION,
   tools: [
     {
@@ -40,47 +43,54 @@ const MAX_ROUNDS = 10;
 export async function generateChartConfig(
   prompt: string,
 ): Promise<ChartConfig> {
-  const chat = model.startChat({ history: [] });
+  try {
+    const chat = model.startChat({ history: [] });
 
-  let result = await chat.sendMessage(prompt);
+    let result = await chat.sendMessage(prompt);
 
-  for (let round = 0; round < MAX_ROUNDS; round++) {
-    const functionCalls = result.response.functionCalls();
+    console.log("Initial Gemini response:", result.response.text());
 
-    if (!functionCalls || functionCalls.length === 0) {
-      const text = result.response.text().trim();
-      const cleaned = text
-        .replace(/^```(?:json)?\s*/m, "")
-        .replace(/\s*```$/m, "");
-      try {
-        return JSON.parse(cleaned) as ChartConfig;
-      } catch {
-        throw new Error(
-          `Failed to parse chart config from Gemini response: ${cleaned}`,
-        );
+    for (let round = 0; round < MAX_ROUNDS; round++) {
+      const functionCalls = result.response.functionCalls();
+
+      if (!functionCalls || functionCalls.length === 0) {
+        const text = result.response.text().trim();
+        const cleaned = text
+          .replace(/^```(?:json)?\s*/m, "")
+          .replace(/\s*```$/m, "");
+        try {
+          return JSON.parse(cleaned) as ChartConfig;
+        } catch {
+          throw new Error(
+            `Failed to parse chart config from Gemini response: ${cleaned}`,
+          );
+        }
       }
+
+      const responseParts: Part[] = [];
+      for (const fc of functionCalls) {
+        if (fc.name === "fetch_chart_data") {
+          const output = fetchChartData(
+            fc.args as unknown as FetchChartDataParams,
+          );
+          responseParts.push({
+            functionResponse: { name: fc.name, response: output },
+          });
+        } else if (fc.name === "validate_chart_data") {
+          const args = fc.args as Record<string, unknown>;
+          const output = validateChartConfig(args);
+          responseParts.push({
+            functionResponse: { name: fc.name, response: output },
+          });
+        }
+      }
+
+      result = await chat.sendMessage(responseParts);
     }
 
-    const responseParts: Part[] = [];
-    for (const fc of functionCalls) {
-      if (fc.name === "fetch_chart_data") {
-        const output = fetchChartData(
-          fc.args as unknown as FetchChartDataParams,
-        );
-        responseParts.push({
-          functionResponse: { name: fc.name, response: output },
-        });
-      } else if (fc.name === "validate_chart_data") {
-        const args = fc.args as Record<string, unknown>;
-        const output = validateChartConfig(args);
-        responseParts.push({
-          functionResponse: { name: fc.name, response: output },
-        });
-      }
-    }
-
-    result = await chat.sendMessage(responseParts);
+    throw new Error("Max rounds reached without a valid chart config");
+  } catch (err: unknown) {
+    console.log("Error in generateChartConfig:", err);
+    throw err;
   }
-
-  throw new Error("Max rounds reached without a valid chart config");
 }
