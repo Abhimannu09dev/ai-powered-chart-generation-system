@@ -65,13 +65,13 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-zinc-950">
-      <header className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+    <div className="flex flex-col min-h-dvh bg-zinc-50">
+      <header className="border-b border-zinc-200 bg-white">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+          <h1 className="text-xl font-semibold text-zinc-900">
             AI Chart Generator
           </h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="text-sm text-zinc-500">
             Describe a chart in plain English
           </p>
         </div>
@@ -86,7 +86,7 @@ export default function Home() {
             onKeyDown={handleKeyDown}
             placeholder='e.g. "Show me a bar chart of Nepal GDP growth from 2019 to 2023"'
             disabled={loading}
-            className="flex-1 px-4 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-4 py-2.5 rounded-lg border border-zinc-300 bg-white text-zinc-900 placeholder-zinc-400 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
             onClick={handleGenerate}
@@ -98,7 +98,7 @@ export default function Home() {
         </div>
 
         {loading && (
-          <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+          <div className="flex items-center gap-2 text-sm text-zinc-600">
             <span className="flex gap-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: "0ms" }} />
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: "150ms" }} />
@@ -109,7 +109,7 @@ export default function Home() {
         )}
 
         {errorMessage && (
-          <div className="w-full p-4 rounded-lg bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">
+          <div className="w-full p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
             {errorMessage}
           </div>
         )}
