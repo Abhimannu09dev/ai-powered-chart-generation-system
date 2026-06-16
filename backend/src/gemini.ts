@@ -97,7 +97,7 @@ const model = genAI.getGenerativeModel({
   ],
 });
 console.log("Initialized Gemini model:", model);
-// const MAX_ROUNDS = 10;
+const MAX_ROUNDS = 10;
 
 export async function generateChartConfig(
   prompt: string,
@@ -109,7 +109,7 @@ export async function generateChartConfig(
 
     const toolCalls: ToolCallRecord[] = [];
 
-    // for (let round = 0; round < MAX_ROUNDS; round++) {
+    for (let round = 0; round < MAX_ROUNDS; round++) {
       const functionCalls = result.response.functionCalls();
 
       if (!functionCalls || functionCalls.length === 0) {
@@ -147,7 +147,7 @@ export async function generateChartConfig(
       }
 
       result = await chat.sendMessage(responseParts);
-    // }
+    }
 
     throw new Error("Max rounds reached without a valid chart config");
   } catch (err: unknown) {
